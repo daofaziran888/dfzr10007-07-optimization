@@ -5,8 +5,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.schemas import ActionResult, EntryPayload, PageResult
-from app.services.vizdrag import VizdragService
+from app.schemas import ActionResult, EntryPayload, PageResult, PublishBatchResult
+from app.services.vizdrag import QUEUE_STATUSES, VizdragService
 
 router = APIRouter(prefix="/api/vizdrag", tags=["拖拽可视化"])
 
@@ -14,6 +14,45 @@ service = VizdragService()
 
 LIST_FIELDS = ["方案编号", "方案名称", "数据源绑定", "图表类型", "横轴字段", "纵轴字段", "分组字段", "方案状态"]
 STATUSES = ["草稿", "已发布", "已嵌入", "已归档"]
+
+
+@router.get("/publish-queue", response_model=PageResult[dict])
+def list_publish_queue(
+    keyword: str | None = Query(default=None, description="按方案编号检索"),
+    status: str | None = Query(default=None, description="待发布、发布中、已完成、失败"),
+    page: int = 1,
+    size: int = 20,
+) -> PageResult[dict]:
+    """发布队列：每项都带失败原因与文件版本，断线恢复后从这里继续；没有数据时返回空页。"""
+    if size > 200:
+        raise HTTPException(status_code=400, detail="每页最多 200 条，请缩小分页范围")
+    if status and status not in QUEUE_STATUSES:
+        raise HTTPException(status_code=400, detail=f"队列状态只能是：{'、'.join(QUEUE_STATUSES)}")
+    items, total = service.list_queue(keyword=keyword, status=status, page=page, size=size)
+    return PageResult(items=items, total=total, page=page, size=size)
+
+
+@router.post("/publish", response_model=PublishBatchResult)
+def publish_schemes(payload: EntryPayload) -> PublishBatchResult:
+    """连续发布：逐项给出回执；已发布过的方案沿用首次发布结果，不重复生成文件。"""
+    codes = payload.values.get("方案编号")
+    if isinstance(codes, str):
+        codes = [code.strip() for code in codes.split(",") if code.strip()]
+    if codes is not None and not isinstance(codes, list):
+        raise HTTPException(status_code=400, detail="方案编号需要是字符串或字符串列表")
+    return service.publish_schemes(codes=[str(code) for code in codes] if codes else None)
+
+
+@router.post("/publish-queue/retry", response_model=PublishBatchResult)
+def retry_publish_queue() -> PublishBatchResult:
+    """断线恢复：只重试未完成项，已完成项保留首次发布结果。"""
+    return service.retry_incomplete()
+
+
+@router.get("/publish-queue/export")
+def export_publish_files() -> dict[str, Any]:
+    """发布结果导出文件：只含已完成项，异常项留在队列而不进入导出文件。"""
+    return service.export_files()
 
 
 @router.get("", response_model=PageResult[dict])

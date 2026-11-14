@@ -28,6 +28,32 @@ class EntryPayload(BaseModel):
     remark: str | None = None
 
 
+class PublishReceipt(BaseModel):
+    """单条发布回执：逐项记录发布结果、失败原因与文件版本，断线恢复后据此对账。"""
+
+    方案编号: str
+    ok: bool
+    status: str
+    error: str | None = None
+    失败原因: str | None = None
+    文件版本: str | None = None
+    导出文件: str | None = None
+    进入导出: bool = False
+    复用首次结果: bool = False
+    message: str
+
+
+class PublishBatchResult(BaseModel):
+    """连续发布的批量回执：逐项结果加汇总；失败项留在队列，不进入导出文件。"""
+
+    ok: bool
+    message: str
+    receipts: list[PublishReceipt] = Field(default_factory=list)
+    完成数: int = 0
+    失败数: int = 0
+    复用数: int = 0
+
+
 
 class MartEntry(BaseModel):
     """集市定义明细结构。"""

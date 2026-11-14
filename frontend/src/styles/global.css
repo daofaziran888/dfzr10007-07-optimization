@@ -33,3 +33,11 @@ body { margin: 0; background: #f6f8fb; color: #1f2937; }
 .link { border: none; background: none; color: var(--brand); cursor: pointer; padding: 0; }
 .page-foot { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--muted); }
 .error-text { color: #b42318; }
+.queue-section { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 8px; }
+.receipt-panel { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; }
+.receipt-panel h3 { margin: 0 0 8px; font-size: 13px; }
+.receipt-panel ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.receipt-panel li { display: flex; gap: 10px; align-items: baseline; font-size: 13px; }
+.receipt-panel code { background: #f1f5f9; border-radius: 4px; padding: 1px 6px; font-size: 12px; }
+.receipt-ok { color: #067647; }
+.receipt-fail { color: #b42318; }
